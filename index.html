@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>7Ei TV — IPTV Dashboard</title>
+  <style>
+    /* ── Reset + Tokens ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d0d0f;
+      --surface:   #18181c;
+      --surface2:  #222228;
+      --border:    #2e2e38;
+      --text:      #e8e8f0;
+      --text-dim:  #8888a0;
+      --accent:    #6366f1;
+      --accent2:   #818cf8;
+      --green:     #22c55e;
+      --red:       #ef4444;
+      --radius:    10px;
+      --shadow:    0 4px 24px rgba(0,0,0,0.5);
+    }
+
+    html { font-size: 15px; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100dvh;
+    }
+
+    /* ── Header ── */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(13,13,15,0.92);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+    }
+
+    .header-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--accent2);
+      white-space: nowrap;
+      letter-spacing: -0.5px;
+    }
+    .logo span { color: var(--text-dim); font-weight: 400; }
+
+    /* ── Search + Filters ── */
+    .controls {
+      display: flex;
+      gap: 8px;
+      flex: 1;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .search-wrap {
+      position: relative;
+      flex: 1 1 220px;
+    }
+
+    .search-wrap svg {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 16px;
+      height: 16px;
+      color: var(--text-dim);
+      pointer-events: none;
+    }
+
+    input[type="search"], select {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 0.9rem;
+      padding: 8px 12px 8px 34px;
+      outline: none;
+      transition: border-color 0.2s;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    input[type="search"]:focus, select:focus {
+      border-color: var(--accent);
+    }
+
+    select {
+      cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238888a0' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+      background-size: 16px;
+      padding-right: 28px;
+    }
+
+    .filter-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      white-space: nowrap;
+      transition: border-color 0.2s;
+    }
+    .filter-btn:hover { border-color: var(--accent); }
+    .filter-btn.active { border-color: var(--accent); color: var(--accent2); }
+
+    /* ── Action / Update buttons ── */
+    .action-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 8px 14px;
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-weight: 600;
+      white-space: nowrap;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    .action-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+    .action-btn.syncing { opacity: 0.6; cursor: default; pointer-events: none; }
+    .action-btn.syncing::after {
+      content: '';
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent2);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: inline-block;
+    }
+    .update-btn { border-color: #f59e0b; color: #f59e0b; }
+    .update-btn:hover { background: rgba(245,158,11,0.1); border-color: #f59e0b; }
+    .update-btn.syncing { border-color: #f59e0b; }
+
+    /* ── Favorites toggle ── */
+    .fav-toggle {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-dim);
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    .fav-toggle:hover { border-color: #f59e0b; color: #f59e0b; }
+    .fav-toggle.showing-favs { border-color: #f59e0b; color: #f59e0b; background: rgba(245,158,11,0.08); }
+
+    /* ── Main content ── */
+    main {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    /* ── Stats bar ── */
+    .stats-bar {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+    }
+    .stats-bar span { display: flex; align-items: center; gap: 4px; }
+    .stat-val { color: var(--text); font-weight: 600; }
+
+    /* ── Channel grid ── */
+    .channel-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+    }
+
+    .channel-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+      position: relative;
+    }
+
+    .channel-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--accent);
+      box-shadow: 0 8px 24px rgba(99,102,241,0.15);
+    }
+
+    .channel-card.playing {
+      border-color: var(--green);
+      box-shadow: 0 0 0 2px rgba(34,197,94,0.3);
+    }
+
+    .channel-card .logo-wrap {
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: var(--surface2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .channel-card .logo-wrap img {
+      max-width: 65%;
+      max-height: 65%;
+      object-fit: contain;
+      image-rendering: -webkit-optimize-contrast;
+    }
+
+    .channel-card .logo-placeholder {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text-dim);
+      letter-spacing: -1px;
+    }
+
+    /* Country badge on logo */
+    .country-badge {
+      position: absolute;
+      bottom: 4px;
+      right: 4px;
+      font-size: 0.65rem;
+      background: rgba(0,0,0,0.75);
+      border-radius: 4px;
+      padding: 1px 4px;
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* Geo / not-24/7 badges */
+    .card-badges {
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      display: flex;
+      gap: 3px;
+    }
+
+    .badge {
+      font-size: 0.6rem;
+      padding: 2px 4px;
+      border-radius: 3px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+    .badge-geo { background: rgba(239,68,68,0.8); color: white; }
+    .badge-24 { background: rgba(245,158,11,0.85); color: white; }
+
+    .channel-card .card-body {
+      padding: 8px 10px;
+    }
+
+    .channel-card .card-name {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.3;
+    }
+
+    .channel-card .card-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 3px;
+    }
+
+    .channel-card .card-meta span {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+    }
+
+    .quality-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      flex-shrink: 0;
+    }
+    .quality-dot.medium { background: #f59e0b; }
+    .quality-dot.low { background: var(--red); }
+
+    /* Favorite star */
+    .fav-star {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
+      opacity: 0;
+      transition: opacity 0.2s;
+      line-height: 1;
+      padding: 2px;
+    }
+    .channel-card:hover .fav-star,
+    .fav-star.is-fav { opacity: 1; }
+    .fav-star.is-fav { color: #f59e0b; }
+
+    /* ── Player Modal ── */
+    .player-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: rgba(0,0,0,0.92);
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .player-modal.open {
+      display: flex;
+    }
+
+    .player-inner {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 900px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .player-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .player-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .player-title img {
+      width: 36px;
+      height: 36px;
+      object-fit: contain;
+      border-radius: 6px;
+      background: var(--surface2);
+    }
+
+    .player-title-text h2 {
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .player-title-text span {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+    }
+
+    .player-badges { display: flex; gap: 6px; }
+
+    .close-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text);
+      font-size: 1.1rem;
+      transition: background 0.2s;
+    }
+    .close-btn:hover { background: var(--border); }
+
+    .video-wrap {
+      background: #000;
+      position: relative;
+      aspect-ratio: 16/9;
+      width: 100%;
+    }
+
+    .video-wrap video {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .player-error {
+      display: none;
+      text-align: center;
+      padding: 24px;
+      color: var(--red);
+    }
+
+    .player-error.show { display: block; }
+
+    .player-error p { margin-top: 8px; font-size: 0.85rem; color: var(--text-dim); }
+
+    /* hls.js loading */
+    .player-loading {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+      color: var(--text-dim);
+      font-size: 0.9rem;
+      gap: 10px;
+    }
+
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .player-footer {
+      padding: 12px 18px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .player-footer a {
+      color: var(--accent2);
+      font-size: 0.8rem;
+      text-decoration: none;
+      word-break: break-all;
+    }
+    .player-footer a:hover { text-decoration: underline; }
+
+    .player-actions {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .player-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .player-btn:hover { border-color: var(--accent); color: var(--accent2); }
+    .player-btn.danger { color: var(--red); }
+    .player-btn.danger:hover { border-color: var(--red); }
+
+    /* ── Pagination / Load more ── */
+    .load-more {
+      text-align: center;
+      padding: 32px;
+    }
+
+    .load-more-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 12px 32px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .load-more-btn:hover { border-color: var(--accent); color: var(--accent2); }
+    .load-more-btn:disabled { opacity: 0.4; cursor: default; }
+
+    /* ── Empty / Error states ── */
+    .state-msg {
+      text-align: center;
+      padding: 64px 24px;
+      color: var(--text-dim);
+    }
+    .state-msg h3 { font-size: 1.1rem; color: var(--text); margin-bottom: 8px; }
+    .state-msg p { font-size: 0.9rem; }
+
+    /* ── Responsive ── */
+    @media (max-width: 480px) {
+      .channel-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
+      .logo { font-size: 1rem; }
+      .controls { gap: 6px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header>
+  <div class="header-inner">
+    <div class="logo">7Ei<span>.tv</span></div>
+    <div class="controls">
+      <div class="search-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="search" id="searchInput" placeholder="Search channels…" autocomplete="off" />
+      </div>
+      <select id="countryFilter">
+        <option value="">🌍 All Countries</option>
+      </select>
+      <select id="categoryFilter">
+        <option value="">📂 All Categories</option>
+      </select>
+      <button class="filter-btn" id="filterBtn" title="Apply filters">
+        🔍 Filter
+      </button>
+      <button class="fav-toggle" id="favToggle" title="Show favorites">
+        ★ <span id="favCount">0</span>
+      </button>
+      <button class="action-btn update-btn" id="updateBtn" title="Check for new channels / update links">
+        🔄 Update
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- ── Main ── -->
+<main>
+  <div class="stats-bar" id="statsBar">
+    <span>📡 <span class="stat-val" id="statTotal">—</span> channels</span>
+    <span>🌍 <span class="stat-val" id="statCountries">—</span> countries</span>
+    <span>📂 <span class="stat-val" id="statCategories">—</span> categories</span>
+    <span>🕐 Synced: <span id="statSynced">—</span></span>
+  </div>
+
+  <div id="channelGrid" class="channel-grid"></div>
+
+  <div class="load-more" id="loadMoreWrap" style="display:none">
+    <button class="load-more-btn" id="loadMoreBtn">Load more</button>
+  </div>
+
+  <div class="state-msg" id="emptyState" style="display:none">
+    <h3>No channels found</h3>
+    <p>Try adjusting your search or filters.</p>
+  </div>
+
+  <div class="state-msg" id="errorState" style="display:none">
+    <h3>⚠️ API unreachable</h3>
+    <p>Make sure the API server is running:<br/>
+    <code style="font-size:0.8rem">python3 skills/iptv-browse/scripts/api.py</code></p>
+  </div>
+</main>
+
+<!-- ── Player Modal ── -->
+<div class="player-modal" id="playerModal">
+  <div class="player-inner">
+    <div class="player-header">
+      <div class="player-title">
+        <img id="playerLogo" src="" alt="" />
+        <div class="player-title-text">
+          <h2 id="playerName">Channel</h2>
+          <span id="playerMeta"></span>
+        </div>
+      </div>
+      <div class="player-badges">
+        <button class="fav-star" id="playerFavBtn" title="Add to favorites">☆</button>
+        <button class="close-btn" id="closePlayerBtn" title="Close">✕</button>
+      </div>
+    </div>
+
+    <div class="video-wrap" id="videoWrap">
+      <video id="videoEl" controls playsinline autoplay></video>
+      <div class="player-loading" id="playerLoading">
+        <div class="spinner"></div> Loading stream…
+      </div>
+      <div class="player-error" id="playerError">
+        <h3>Playback failed</h3>
+        <p>The stream could not be loaded. Try again or open in external player.</p>
+      </div>
+    </div>
+
+    <div class="player-footer">
+      <a id="streamUrl" href="#" target="_blank" rel="noopener">Stream URL</a>
+      <div class="player-actions">
+        <button class="player-btn" id="openExternalBtn">Open in player</button>
+        <button class="player-btn danger" id="stopBtn">Stop</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Config (must load first) -->
+<script src="config.js"></script>
+<!-- hls.js -->
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.7/dist/hls.min.js"></script>
+
+<script>
+// ── Config ──────────────────────────────────────────────────────────────────
+const API = window.API_BASE || (
+  window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:8080'
+  : ''
+);
+
+// ── State ───────────────────────────────────────────────────────────────────
+let allChannels = [];
+let filteredChannels = [];
+let displayOffset = 0;
+const PAGE_SIZE = 48;
+let showingFavorites = false;
+let favorites = new Set(JSON.parse(localStorage.getItem('7ei_tv_favs') || '[]'));
+let hlsInstance = null;
+let currentChannel = null;
+
+// ── DOM refs ─────────────────────────────────────────────────────────────────
+const $grid       = document.getElementById('channelGrid');
+const $filterBtn  = document.getElementById('filterBtn');
+const $updateBtn   = document.getElementById('updateBtn');
+const $statsBar   = document.getElementById('statsBar');
+const $search     = document.getElementById('searchInput');
+const $country    = document.getElementById('countryFilter');
+const $category   = document.getElementById('categoryFilter');
+const $favToggle  = document.getElementById('favToggle');
+const $favCount   = document.getElementById('favCount');
+const $loadMore   = document.getElementById('loadMoreWrap');
+const $loadMoreBtn= document.getElementById('loadMoreBtn');
+const $emptyState = document.getElementById('emptyState');
+const $errorState = document.getElementById('errorState');
+const $modal      = document.getElementById('playerModal');
+const $videoEl    = document.getElementById('videoEl');
+const $playerLogo = document.getElementById('playerLogo');
+const $playerName = document.getElementById('playerName');
+const $playerMeta = document.getElementById('playerMeta');
+const $playerFav  = document.getElementById('playerFavBtn');
+const $playerErr  = document.getElementById('playerError');
+const $playerLoad = document.getElementById('playerLoading');
+const $streamUrl  = document.getElementById('streamUrl');
+const $openExtBtn = document.getElementById('openExternalBtn');
+const $stopBtn    = document.getElementById('stopBtn');
+
+// ── Flag emoji ───────────────────────────────────────────────────────────────
+function flag(code) {
+  if (!code || code.length !== 2 || !/[A-Z]/i.test(code)) return '🌐';
+  return String.fromCodePoint(code.charCodeAt(0) + 127397) +
+         String.fromCodePoint(code.charCodeAt(1) + 127397);
+}
+
+// ── Quality dot color ─────────────────────────────────────────────────────────
+function qualityClass(q) {
+  if (!q || q === 'Unknown') return 'low';
+  const n = parseInt(q);
+  if (n >= 720) return '';
+  if (n >= 480) return 'medium';
+  return 'low';
+}
+
+// ── Category emoji ───────────────────────────────────────────────────────────
+const CAT_EMOJI = {
+  'General':'📺','News':'📰','Sports':'⚽','Music':'🎵','Movies':'🎬',
+  'Entertainment':'🎭','Kids':'🧒','Documentary':'🎞️','Education':'📚',
+  'Religious':'⛪','Culture':'🏛️','Science':'🔬','Gaming':'🎮',
+  'Business':'💼','Public':'🏛️','Auto':'🚗','Travel':'✈️','Weather':'🌤️',
+  'Food':'🍳','Fashion':'👗','Comedy':'😂','Drama':'🎭','Horror':'👻',
+  'Action':'💥','Classic':'📼','Animation':'🎨','Series':'📺',
+  'Undefined':'❓',
+};
+function catEmoji(cat) { return CAT_EMOJI[cat] || '📺'; }
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+async function init() {
+  updateFavCount();
+
+  try {
+    const [stats, countries, categories] = await Promise.all([
+      fetchJSON('/stats'),
+      fetchJSON('/countries'),
+      fetchJSON('/categories'),
+    ]);
+
+    document.getElementById('statTotal').textContent = stats.total_channels.toLocaleString();
+    document.getElementById('statCountries').textContent = stats.countries
+      ? Object.keys(stats.countries).length : '—';
+    document.getElementById('statCategories').textContent = categories.total;
+    document.getElementById('statSynced').textContent = stats.last_synced
+      ? new Date(stats.last_synced).toLocaleDateString()
+      : '—';
+
+    // Populate country dropdown
+    countries.countries.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.code;
+      opt.textContent = `${flag(c.code)} ${c.code} — ${c.name} (${c.count})`;
+      $country.appendChild(opt);
+    });
+
+    // Populate category dropdown
+    categories.categories.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.name;
+      opt.textContent = `${catEmoji(c.name)} ${c.name} (${c.count})`;
+      $category.appendChild(opt);
+    });
+
+    // Load first batch of channels
+    allChannels = await fetchJSON('/channels?limit=500');
+    filteredChannels = allChannels.channels;
+    render();
+
+  } catch (e) {
+    console.error(e);
+    $errorState.style.display = 'block';
+  }
+}
+
+// ── Fetch ────────────────────────────────────────────────────────────────────
+async function fetchJSON(url) {
+  const r = await fetch(API + url);
+  if (!r.ok) throw new Error(r.status);
+  return r.json();
+}
+
+// ── Filter ───────────────────────────────────────────────────────────────────
+function applyFilters() {
+  const q = $search.value.trim();
+  const cc = $country.value;
+  const cat = $category.value;
+
+  filteredChannels = allChannels.filter(ch => {
+    if (showingFavorites && !favorites.has(ch.name)) return false;
+    if (q) {
+      const ql = q.toLowerCase();
+      if (!ch.name.toLowerCase().includes(ql) &&
+          !(ch.country || '').toLowerCase().includes(ql) &&
+          !(ch.category || '').toLowerCase().includes(ql) &&
+          !(ch.country_name || '').toLowerCase().includes(ql)) return false;
+    }
+    if (cc && ch.country !== cc) return false;
+    if (cat && ch.category !== cat) return false;
+    return true;
+  });
+
+  displayOffset = 0;
+  $grid.innerHTML = '';
+  render();
+}
+
+// ── Render ───────────────────────────────────────────────────────────────────
+function render() {
+  const page = filteredChannels.slice(displayOffset, displayOffset + PAGE_SIZE);
+
+  if (filteredChannels.length === 0) {
+    $emptyState.style.display = 'block';
+    $loadMore.style.display = 'none';
+    $statsBar.style.display = 'none';
+    return;
+  }
+
+  $emptyState.style.display = 'none';
+  $statsBar.style.display = 'flex';
+  $loadMore.style.display = filteredChannels.length > displayOffset + PAGE_SIZE ? 'block' : 'none';
+
+  page.forEach(ch => {
+    const card = document.createElement('div');
+    card.className = 'channel-card';
+    card.dataset.name = ch.name;
+    if (favorites.has(ch.name)) card.classList.add('fav');
+
+    const isFav = favorites.has(ch.name);
+    const geo = ch.geo_blocked ? '<span class="badge badge-geo">🔒</span>' : '';
+    const not24 = ch.not_24_7 ? '<span class="badge badge-24">⏱</span>' : '';
+    const quality = ch.quality && ch.quality !== 'Unknown' ? ch.quality : '';
+    const qClass = qualityClass(quality);
+
+    card.innerHTML = `
+      <div class="logo-wrap">
+        ${ch.logo
+          ? `<img src="${ch.logo}" alt="${ch.name}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=logo-placeholder>${flag(ch.country)}</div>'"/>`
+          : `<div class="logo-placeholder">${flag(ch.country)}</div>`
+        }
+        <span class="country-badge">${flag(ch.country)} ${ch.country}</span>
+        <div class="card-badges">${geo}${not24}</div>
+        <button class="fav-star ${isFav ? 'is-fav' : ''}" data-name="${ch.name}" title="${isFav ? 'Remove from favorites' : 'Add to favorites'}">${isFav ? '★' : '☆'}</button>
+      </div>
+      <div class="card-body">
+        <div class="card-name" title="${ch.name}">${ch.name}</div>
+        <div class="card-meta">
+          <div class="quality-dot ${qClass}"></div>
+          <span>${catEmoji(ch.category)} ${ch.category}</span>
+        </div>
+      </div>
+    `;
+
+    card.addEventListener('click', e => {
+      if (e.target.classList.contains('fav-star')) {
+        e.stopPropagation();
+        toggleFav(e.target.dataset.name, e.target);
+        return;
+      }
+      openPlayer(ch);
+    });
+
+    $grid.appendChild(card);
+  });
+
+  displayOffset += page.length;
+}
+
+// ── Favorites ────────────────────────────────────────────────────────────────
+function toggleFav(name, btn) {
+  if (favorites.has(name)) {
+    favorites.delete(name);
+    btn.classList.remove('is-fav');
+    btn.textContent = '☆';
+    btn.title = 'Add to favorites';
+  } else {
+    favorites.add(name);
+    btn.classList.add('is-fav');
+    btn.textContent = '★';
+    btn.title = 'Remove from favorites';
+  }
+  localStorage.setItem('7ei_tv_favs', JSON.stringify([...favorites]));
+  updateFavCount();
+  if (showingFavorites) applyFilters();
+}
+
+function updateFavCount() {
+  $favCount.textContent = favorites.size;
+  if (showingFavorites) {
+    $favToggle.classList.add('showing-favs');
+  } else {
+    $favToggle.classList.remove('showing-favs');
+  }
+}
+
+// ── Player ──────────────────────────────────────────────────────────────────
+function openPlayer(ch) {
+  currentChannel = ch;
+  $playerName.textContent = ch.name;
+  $playerMeta.textContent = `${flag(ch.country)} ${ch.country_name || ch.country} • ${catEmoji(ch.category)} ${ch.category} • ${ch.quality || 'Unknown'}`;
+  $playerLogo.src = ch.logo || '';
+  $playerLogo.style.display = ch.logo ? '' : 'none';
+  $streamUrl.href = ch.stream_url;
+  $streamUrl.textContent = ch.stream_url.length > 60 ? ch.stream_url.slice(0, 57) + '…' : ch.stream_url;
+
+  const isFav = favorites.has(ch.name);
+  $playerFav.textContent = isFav ? '★' : '☆';
+  $playerFav.classList.toggle('is-fav', isFav);
+  $playerFav.title = isFav ? 'Remove from favorites' : 'Add to favorites';
+
+  $playerErr.classList.remove('show');
+  $playerLoad.style.display = 'flex';
+  $videoEl.style.display = 'block';
+
+  $modal.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  // Mark card as playing
+  document.querySelectorAll('.channel-card.playing').forEach(el => el.classList.remove('playing'));
+  const card = document.querySelector(`.channel-card[data-name="${ch.name}"]`);
+  if (card) card.classList.add('playing');
+
+  // Destroy old HLS
+  destroyHls();
+
+  // Try HLS playback
+  const video = $videoEl;
+  const streamUrl = ch.stream_url;
+
+  if (streamUrl.includes('.m3u8')) {
+    if (Hls.isSupported()) {
+      const hls = new Hls({ startPosition: -2 });
+      hls.loadSource(streamUrl);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        $playerLoad.style.display = 'none';
+        video.play().catch(() => { $playerErr.classList.add('show'); });
+      });
+      hls.on(Hls.Events.ERROR, (event, data) => {
+        if (data.fatal) {
+          $playerLoad.style.display = 'none';
+          $playerErr.classList.add('show');
+        }
+      });
+      hlsInstance = hls;
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      // Safari native HLS
+      video.src = streamUrl;
+      video.addEventListener('loadedmetadata', () => {
+        $playerLoad.style.display = 'none';
+        video.play();
+      }, { once: true });
+    } else {
+      $playerLoad.style.display = 'none';
+      $playerErr.classList.add('show');
+    }
+  } else {
+    // Direct MP4/WebM stream
+    video.src = streamUrl;
+    video.addEventListener('loadedmetadata', () => {
+      $playerLoad.style.display = 'none';
+      video.play().catch(() => { $playerErr.classList.add('show'); });
+    }, { once: true });
+    video.onerror = () => {
+      $playerLoad.style.display = 'none';
+      $playerErr.classList.add('show');
+    };
+  }
+}
+
+function destroyHls() {
+  if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
+}
+
+function closePlayer() {
+  destroyHls();
+  $videoEl.pause();
+  $videoEl.src = '';
+  $modal.classList.remove('open');
+  document.body.style.overflow = '';
+  document.querySelectorAll('.channel-card.playing').forEach(el => el.classList.remove('playing'));
+  currentChannel = null;
+}
+
+// ── Events ───────────────────────────────────────────────────────────────────
+$search.addEventListener('input', debounce(applyFilters, 250));
+$filterBtn.addEventListener('click', applyFilters);
+$country.addEventListener('change', applyFilters);  // still auto-apply on change for convenience
+$category.addEventListener('change', applyFilters); // still auto-apply on change for convenience
+
+$favToggle.addEventListener('click', () => {
+  showingFavorites = !showingFavorites;
+  updateFavCount();
+  applyFilters();
+});
+
+// ── Update / Sync ─────────────────────────────────────────────────────────────
+async function doUpdate() {
+  if ($updateBtn.classList.contains('syncing')) return;
+  $updateBtn.classList.add('syncing');
+  $updateBtn.textContent = ' Syncing…';
+  try {
+    const res = await fetchJSON('/api/sync');
+    console.log('Sync started:', res);
+    // Poll stats until synced_iso changes (means sync finished)
+    const startSynced = document.getElementById('statSynced').textContent;
+    let attempts = 0;
+    await new Promise(resolve => setTimeout(resolve, 5000)); // wait 5s for background sync to start
+    // Reload data
+    const [stats, channelsData] = await Promise.all([
+      fetchJSON('/stats'),
+      fetchJSON('/channels?limit=500'),
+    ]);
+    document.getElementById('statTotal').textContent = stats.total_channels.toLocaleString();
+    document.getElementById('statCountries').textContent = stats.countries
+      ? Object.keys(stats.countries).length : '—';
+    document.getElementById('statCategories').textContent = Object.keys(stats.categories || {}).length;
+    document.getElementById('statSynced').textContent = stats.last_synced
+      ? new Date(stats.last_synced).toLocaleDateString()
+      : '—';
+    allChannels = channelsData.channels;
+    applyFilters();
+  } catch (e) {
+    console.error('Update failed:', e);
+    alert('Update failed. Is the Mac Mini reachable?');
+  } finally {
+    $updateBtn.classList.remove('syncing');
+    $updateBtn.textContent = ' 🔄 Update';
+  }
+}
+
+$updateBtn.addEventListener('click', doUpdate);
+
+$loadMoreBtn.addEventListener('click', render);
+
+$playerFav.addEventListener('click', () => {
+  if (!currentChannel) return;
+  toggleFav(currentChannel.name, $playerFav);
+  // Sync with card fav-star button
+  const cardBtn = document.querySelector(`.fav-star[data-name="${currentChannel.name}"]`);
+  if (cardBtn) {
+    const isFav = favorites.has(currentChannel.name);
+    cardBtn.textContent = isFav ? '★' : '☆';
+    cardBtn.classList.toggle('is-fav', isFav);
+  }
+});
+
+$openExtBtn.addEventListener('click', () => {
+  if (!currentChannel) return;
+  window.open(currentChannel.stream_url, '_blank', 'noopener');
+});
+
+$stopBtn.addEventListener('click', closePlayer);
+
+document.getElementById('closePlayerBtn').addEventListener('click', closePlayer);
+
+$modal.addEventListener('click', e => {
+  if (e.target === $modal) closePlayer();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closePlayer();
+});
+
+function debounce(fn, ms) {
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+
+// ── Go ───────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
