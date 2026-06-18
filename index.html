@@ -745,9 +745,10 @@ async function init() {
       $category.appendChild(opt);
     });
 
-    // Load all channels (server-side filtered on search/filter)
-    allChannels = await fetchJSON('/channels?limit=12000');
-    filteredChannels = [...allChannels.channels];
+    // Load all channels
+    const allData = await fetchJSON('/channels?limit=12000');
+    allChannels = allData.channels;
+    filteredChannels = [...allChannels];
     render();
 
   } catch (e) {
