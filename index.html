@@ -633,18 +633,14 @@
   </div>
 </div>
 
-<!-- Config (must load first) -->
-<script src="config.js"></script>
 <!-- hls.js -->
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.7/dist/hls.min.js"></script>
 
 <script>
 // ── Config ──────────────────────────────────────────────────────────────────
-const API = window.API_BASE || (
-  window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+const API = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? 'http://localhost:8080'
-  : ''
-);
+  : '';
 
 // ── State ───────────────────────────────────────────────────────────────────
 let allChannels = [];
@@ -745,9 +741,9 @@ async function init() {
       $category.appendChild(opt);
     });
 
-    // Load first batch of channels
-    allChannels = await fetchJSON('/channels?limit=500');
-    filteredChannels = allChannels.channels;
+    // Load all channels (server-side filtered on search/filter)
+    allChannels = await fetchJSON('/channels?limit=12000');
+    filteredChannels = [...allChannels.channels];
     render();
 
   } catch (e) {
@@ -992,7 +988,7 @@ async function doUpdate() {
     // Reload data
     const [stats, channelsData] = await Promise.all([
       fetchJSON('/stats'),
-      fetchJSON('/channels?limit=500'),
+      fetchJSON('/channels?limit=12000'),
     ]);
     document.getElementById('statTotal').textContent = stats.total_channels.toLocaleString();
     document.getElementById('statCountries').textContent = stats.countries
